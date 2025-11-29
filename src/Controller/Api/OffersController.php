@@ -19,7 +19,7 @@ final class OffersController extends AbstractController
         $this->path = filter_input(INPUT_SERVER, 'DOCUMENT_ROOT') . '/../xml/offers.xml';
     }
 
-    #[Route('/api/offers', name: 'get_api_offers',methods: ['GET'])]
+    #[Route('/api/offers', name: 'get_api_offers', methods: ['GET'])]
     public function index(): JsonResponse
     {
         $superResponse = ['message' => 'Данные не найдены'];
@@ -51,9 +51,9 @@ final class OffersController extends AbstractController
         }
         return $this->json($superResponse, $code);
     }
-    
-    #[Route('/api/offers', name: 'post_api_offers',methods: ['POST'])]
-    public function add(Request $request): JsonResponse
+
+    #[Route('/api/offers', name: 'post_api_offers', methods: ['POST'])]
+    public function store(Request $request): JsonResponse
     {
         /** @var array<string, string|array<string, string>> $offer */
         $offer = json_decode($request->getContent(), true);
@@ -103,9 +103,9 @@ final class OffersController extends AbstractController
         //return response()->json(['code' => HttpCode::CREATED, 'message' => 'Принято']);
         return $this->json(['message' => 'Принято'], Response::HTTP_CREATED);
     }
-    
-    #[Route('/api/offers/{guid}', name: 'get_api_offer',methods: ['GET'])]
-    public function view(string $guid): JsonResponse
+
+    #[Route('/api/offers/{guid}', name: 'get_api_offer', methods: ['GET'])]
+    public function show(string $guid): JsonResponse
     {
         if (!file_exists($this->path)) {
             $response = ['message' => 'Данные не найдены'];
@@ -135,6 +135,56 @@ final class OffersController extends AbstractController
                     }
                 }
                 //print_r($response);
+            }
+        }
+        return $this->json($response, $code);
+    }
+
+    #[Route('/api/offers/{guid}', name: 'edit_api_offer', methods: ['PUT'])]
+    public function update(Request $request, string $guid)
+    {
+        /** @var array<string, string|array<string, string>> $offer */
+        $offer = json_decode($request->getContent(), true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            // Handle JSON decoding error
+            return new JsonResponse(['message' => 'Invalid JSON provided'], Response::HTTP_BAD_REQUEST);
+        }
+        if (!file_exists($this->path)) {
+            $response = ['message' => 'Данные не найдены'];
+            $code = Response::HTTP_NOT_FOUND;
+        } else {
+            $xmlString = (string)file_get_contents($this->path);
+            $dom = new \DomDocument();
+            $dom->loadXML($xmlString);
+
+            // Найдем элемент который необходимо изменить
+            $xpath = new \DOMXpath($dom);
+            $nodelist = $xpath->query("/offers/offer[@internal-id='" . $guid . "']");
+            $response = ['message' => 'Оффер не найден'];
+            $code = Response::HTTP_NOT_FOUND;
+            $foundNode = $nodelist->item(0);
+            if ($foundNode) {
+                foreach ($offer as $field => $value) {
+                    //$node = $foundNode->getElementsByTagName(Inflector::dasherize($field));
+                    $node = $foundNode->getElementsByTagName($field);
+                    if ($node->item(0) && $field !== 'creationDate') {
+                        if (is_string($value)) {
+                            $node->item(0)->nodeValue = $value;
+                        } else {
+                            foreach ($value as $subField => $subValue) {
+                                //$subNode = $node->item(0)->getElementsByTagName(Inflector::dasherize($subField));
+                                $subNode = $node->item(0)->getElementsByTagName($subField);
+                                if ($subNode->item(0)) {
+                                    $subNode->item(0)->nodeValue = $subValue;
+                                }
+                            }
+                        }
+                    }
+                }
+                $savedXml = $dom->saveXML();
+                file_put_contents($this->path, $savedXml);
+                $response = ['message' => 'Сохранено'];
+                $code = Response::HTTP_OK;
             }
         }
         return $this->json($response, $code);
