@@ -18,6 +18,7 @@
         "phpunit/phpunit": "^12.4",
         "symfony/browser-kit": "8.0.*",
         "symfony/css-selector": "8.0.*",
+        "symfony/http-client": "8.0.*",
         "symfony/maker-bundle": "^1.65"
     },
     "config": {
