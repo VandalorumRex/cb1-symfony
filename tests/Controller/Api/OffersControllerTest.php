@@ -14,4 +14,12 @@ class OffersControllerTest extends WebTestCase
         $this->assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
         //$this->assertJsonContains(['@id' => '/']);
     }
+    
+    public function testStore(): void
+    {
+        $response = static::createClient()->xmlHttpRequest('POST', '/api/offers', ['name' => 'Fabien']);;
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+        //$this->assertJsonContains(['@id' => '/']);
+    }
 }
