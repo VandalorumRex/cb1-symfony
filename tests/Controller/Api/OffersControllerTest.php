@@ -9,17 +9,38 @@ class OffersControllerTest extends WebTestCase
 {
     public function testIndex(): void
     {
-        $response = static::createClient()->request('GET', '/api/offers');
-
-        $this->assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
+        static::createClient()->request('GET', '/api/offers');
+        $this->assertResponseIsSuccessful();
+        //$this->assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
         //$this->assertJsonContains(['@id' => '/']);
     }
     
     public function testStore(): void
     {
-        $response = static::createClient()->xmlHttpRequest('POST', '/api/offers', ['name' => 'Fabien']);;
-
+        $client = static::createClient();
+        $client->xmlHttpRequest('POST', '/api/offers', ['name' => 'Fabien']);;
         $this->assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
-        //$this->assertJsonContains(['@id' => '/']);
+        
+        $content='{
+            "type": "продажа",
+            "propertyType": "жилая",
+            "category": "дача",
+            "garageType": "гараж",
+            "lotNumber": "1",
+            "cadastralNumber": "16:00:111222:789",
+            "url": "https://example.com",
+            "creationDate": "",
+            "location": {
+              "country": "Россия",
+              "region": "Республика Татарстан",
+              "district": "Зеленодольский",
+              "localityName": "Осиново",
+              "subLocalityName": "Радужный",
+              "address": "Садовая 9",
+              "apartment": ""
+            }
+          }';
+        $client->request('POST', '/api/offers', content: $content);;
+        $this->assertResponseStatusCodeSame(Response::HTTP_CREATED);
     }
 }
