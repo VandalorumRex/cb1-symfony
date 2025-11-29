@@ -10,3 +10,8 @@
 ###< symfony/framework-bundle ###
 /nbproject/
 xml/
+
+###> phpunit/phpunit ###
+/phpunit.xml
+/.phpunit.cache/
+###< phpunit/phpunit ###
