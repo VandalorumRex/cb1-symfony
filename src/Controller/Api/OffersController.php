@@ -19,6 +19,38 @@ final class OffersController extends AbstractController
         $this->path = filter_input(INPUT_SERVER, 'DOCUMENT_ROOT') . '/../xml/offers.xml';
     }
 
+    #[Route('/api/offers/{guid}', name: 'delete_api_offer', methods: ['DELETE'])]
+    public function destroy(string $guid)
+    {
+        if (!file_exists($this->path)) {
+            $response = ['message' => 'Данные не найдены'];
+            $code = Response::HTTP_NOT_FOUND;
+        } else {
+            $xmlString = (string)file_get_contents($this->path);
+            $dom = new \DomDocument();
+            $dom->loadXML($xmlString);
+
+            // Найдем элемент который необходимо удалить
+            $xpath = new \DOMXpath($dom);
+            $nodelist = $xpath->query("/offers/offer[@internal-id='" . $guid . "']");
+            $response = ['message' => 'Оффер не найден'];
+            $code = Response::HTTP_NOT_FOUND;
+            $oldnode = $nodelist->item(0);
+            if ($oldnode) {
+                // Удаляем элемент
+                $oldnode->parentNode->removeChild($oldnode);
+                $dom->preserveWhiteSpace = false;
+                $dom->formatOutput = true;
+                $savedXml = $dom->saveXML();
+                $xmlPretty = str_replace("  \n", '', $savedXml);
+                file_put_contents($this->path, $xmlPretty);
+                $response = ['message' => 'Оффер успешно удалён'];
+                $code = Response::HTTP_OK;
+            }
+        }
+        return $this->json($response, $code);
+    }
+
     #[Route('/api/offers', name: 'get_api_offers', methods: ['GET'])]
     public function index(): JsonResponse
     {
