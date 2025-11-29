@@ -103,4 +103,40 @@ final class OffersController extends AbstractController
         //return response()->json(['code' => HttpCode::CREATED, 'message' => 'Принято']);
         return $this->json(['message' => 'Принято'], Response::HTTP_CREATED);
     }
+    
+    #[Route('/api/offers/{guid}', name: 'get_api_offer',methods: ['GET'])]
+    public function view(string $guid): JsonResponse
+    {
+        if (!file_exists($this->path)) {
+            $response = ['message' => 'Данные не найдены'];
+            $code = Response::HTTP_NOT_FOUND;
+        } else {
+            $xmlString = (string)file_get_contents($this->path);
+            $xml = new \SimpleXMLElement($xmlString);
+            $response = ['message' => 'Оффер на найден'];
+            $code = Response::HTTP_NOT_FOUND;
+            $offer = $xml->xpath("//offer[@internal-id='" . $guid . "']");
+            if ($offer) {
+                $response = ['internalId' => $guid];
+                $code = Response::HTTP_OK;
+                foreach ($offer[0] as $field => $value) {
+                    $isObject = count($value[0]) > 1;
+                    // camel-case => camelCase
+                    $feld = $field;//Inflector::variable($field, '-');
+                    $response[$feld] =  $isObject ? $value[0] : (string)$value[0];
+                    if (!$isObject) {
+                        $response[$feld] =  (string)$value[0];
+                    } else {
+                        $response[$feld] = [];
+                        foreach ($value[0] as $subField => $subValue) {
+                            //$response[$feld][Inflector::variable($subField, '-')] = (string)$subValue[0];
+                            $response[$feld][$subField] = (string)$subValue[0];
+                        }
+                    }
+                }
+                //print_r($response);
+            }
+        }
+        return $this->json($response, $code);
+    }
 }
