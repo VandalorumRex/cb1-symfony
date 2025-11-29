@@ -2,8 +2,10 @@
 
 namespace App\Controller\Api;
 
+use App\Lib\Utils;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -17,7 +19,7 @@ final class OffersController extends AbstractController
         $this->path = filter_input(INPUT_SERVER, 'DOCUMENT_ROOT') . '/../xml/offers.xml';
     }
 
-    #[Route('/api/offers', name: 'app_api_offers')]
+    #[Route('/api/offers', name: 'get_api_offers',methods: ['GET'])]
     public function index(): JsonResponse
     {
         $superResponse = ['message' => 'Данные не найдены'];
@@ -48,5 +50,57 @@ final class OffersController extends AbstractController
             }
         }
         return $this->json($superResponse, $code);
+    }
+    
+    #[Route('/api/offers', name: 'post_api_offers',methods: ['POST'])]
+    public function add(Request $request): JsonResponse
+    {
+        /** @var array<string, string|array<string, string>> $offer */
+        $offer = json_decode($request->getContent(), true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            // Handle JSON decoding error
+            return new JsonResponse(['message' => 'Invalid JSON provided'], Response::HTTP_BAD_REQUEST);
+        }
+        //return $this->json($offer);
+        if (!file_exists(filter_input(INPUT_SERVER, 'DOCUMENT_ROOT') . '/../xml')) {
+            mkdir(filter_input(INPUT_SERVER, 'DOCUMENT_ROOT') . '/../xml');
+        }
+        if (!file_exists($this->path)) {
+            $xmlString = '<?xml version="1.0" encoding="UTF-8"?><offers></offers>';
+        } else {
+            $xmlString = (string)file_get_contents($this->path);
+        }
+        $offers = new \SimpleXMLElement($xmlString);
+        $child = $offers->addChild('offer');
+        foreach ($offer as $field => $item) {
+            if (is_array($item)) {
+                $onyq = $child->addChild($field);
+                //print_r($item);
+                foreach ($item as $subField => $subItem) {
+                    // Превращаем camelCase в camel-case
+                    //$onyq->addChild(Inflector::dasherize($subField), $subItem);
+                    //print_r($subItem);
+                    $onyq->addChild($subField, $subItem);
+                }
+            } else {
+                if ($field === 'creationDate' && !$item) {
+                    $item = date('c');
+                }
+                // Превращаем camelCase в camel-case согласно
+                // https://yandex.ru/support/realty/ru/requirements/requirements-sale-housing#in_common
+                //$child->addChild(Inflector::dasherize($field), $item);
+                $child->addChild($field, $item);
+            }
+        }
+        $child->addAttribute('internal-id', Utils::GUIDv4());
+
+        $dom = new \DOMDocument('1.0');
+        $dom->preserveWhiteSpace = false;
+        $dom->formatOutput = true;
+        $dom->loadXML((string)$offers->asXML());
+        $xmlPretty = $dom->saveXML();
+        file_put_contents($this->path, $xmlPretty);
+        //return response()->json(['code' => HttpCode::CREATED, 'message' => 'Принято']);
+        return $this->json(['message' => 'Принято'], Response::HTTP_CREATED);
     }
 }
